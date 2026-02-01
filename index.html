@@ -1379,6 +1379,11 @@
                 this.renderer = new Renderer(this.canvas, mode);
                 this.sprites = new SpriteManager(mode);
                 
+                // Load 16-bit PNG sprites if 16-bit mode
+                if (modeId === '16bit') {
+                    await load16BitSprites();
+                }
+                
                 return true;
             }
             
@@ -2064,11 +2069,147 @@
                             'assets/pang/8bit-cpc/player_walk_4.png',
                             'assets/pang/8bit-cpc/player_walk_5.png'
                         ]
+                    },
+                    '16bit': {
+                        idle: ['../sprites/player/player_rear_1.png'],
+                        walk: [
+                            '../sprites/player/player_walk_1.png',
+                            '../sprites/player/player_walk_2.png',
+                            '../sprites/player/player_walk_3.png',
+                            '../sprites/player/player_walk_4.png',
+                            '../sprites/player/player_walk_5.png',
+                            '../sprites/player/player_walk_6.png',
+                            '../sprites/player/player_walk_7.png',
+                            '../sprites/player/player_walk_8.png'
+                        ],
+                        shoot: [
+                            '../sprites/player/player_look_up_1.png',
+                            '../sprites/player/player_look_up_2.png',
+                            '../sprites/player/player_look_up_3.png',
+                            '../sprites/player/player_look_up_4.png'
+                        ],
+                        rear: [
+                            '../sprites/player/player_rear_1.png',
+                            '../sprites/player/player_rear_2.png',
+                            '../sprites/player/player_rear_3.png'
+                        ],
+                        jump: [
+                            '../sprites/player/player_jump_1.png',
+                            '../sprites/player/player_jump_2.png',
+                            '../sprites/player/player_jump_3.png',
+                            '../sprites/player/player_jump_4.png'
+                        ],
+                        fall: [
+                            '../sprites/player/player_fall_1.png',
+                            '../sprites/player/player_fall_2.png'
+                        ]
                     }
                 },
                 tilesheet: {}
+            },
+            ball: {
+                software: {
+                    '16bit': {
+                        large: ['../sprites/ball_large.png'],
+                        medium: ['../sprites/ball_medium.png'],
+                        small: ['../sprites/ball_small.png']
+                    }
+                }
+            },
+            harpoon: {
+                software: {
+                    '16bit': {
+                        head: ['../sprites/harpoon_head.png'],
+                        body: ['../sprites/harpoon_body.png']
+                    }
+                }
+            },
+            background: {
+                software: {
+                    '16bit': {
+                        desert: ['../sprites/background_desert.png']
+                    }
+                }
+            },
+            border: {
+                software: {
+                    '16bit': {
+                        tile: ['../sprites/border_tile.png']
+                    }
+                }
             }
         };
+        
+        // ===================================================================
+        // 16-BIT SPRITE CACHE - Loaded PNG images for 16-bit mode
+        // ===================================================================
+        const SPRITES_16BIT = {
+            player: {},
+            balls: {},
+            harpoon: {},
+            background: null,
+            border: null,
+            loaded: false
+        };
+        
+        // Load all 16-bit sprites
+        async function load16BitSprites() {
+            if (SPRITES_16BIT.loaded) return;
+            
+            const loadImage = (src) => new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error(`Failed to load: ${src}`));
+                img.src = src;
+            });
+            
+            try {
+                // Load player sprites
+                SPRITES_16BIT.player.walk = await Promise.all([
+                    loadImage('../sprites/player/player_walk_1.png'),
+                    loadImage('../sprites/player/player_walk_2.png'),
+                    loadImage('../sprites/player/player_walk_3.png'),
+                    loadImage('../sprites/player/player_walk_4.png'),
+                    loadImage('../sprites/player/player_walk_5.png'),
+                    loadImage('../sprites/player/player_walk_6.png'),
+                    loadImage('../sprites/player/player_walk_7.png'),
+                    loadImage('../sprites/player/player_walk_8.png')
+                ]);
+                
+                SPRITES_16BIT.player.rear = await Promise.all([
+                    loadImage('../sprites/player/player_rear_1.png'),
+                    loadImage('../sprites/player/player_rear_2.png'),
+                    loadImage('../sprites/player/player_rear_3.png')
+                ]);
+                
+                SPRITES_16BIT.player.shoot = await Promise.all([
+                    loadImage('../sprites/player/player_look_up_1.png'),
+                    loadImage('../sprites/player/player_look_up_2.png'),
+                    loadImage('../sprites/player/player_look_up_3.png'),
+                    loadImage('../sprites/player/player_look_up_4.png')
+                ]);
+                
+                // Load ball sprites
+                SPRITES_16BIT.balls.large = await loadImage('../sprites/ball_large.png');
+                SPRITES_16BIT.balls.medium = await loadImage('../sprites/ball_medium.png');
+                SPRITES_16BIT.balls.small = await loadImage('../sprites/ball_small.png');
+                
+                // Load harpoon sprites
+                SPRITES_16BIT.harpoon.head = await loadImage('../sprites/harpoon_head.png');
+                SPRITES_16BIT.harpoon.body = await loadImage('../sprites/harpoon_body.png');
+                
+                // Load background
+                SPRITES_16BIT.background = await loadImage('../sprites/background_desert.png');
+                
+                // Load border tile
+                SPRITES_16BIT.border = await loadImage('../sprites/border_tile.png');
+                
+                SPRITES_16BIT.loaded = true;
+                console.log('16-bit sprites loaded successfully');
+            } catch (e) {
+                console.warn('Some 16-bit sprites failed to load:', e);
+            }
+        }
         
         // ===================================================================
         // BACKGROUND DEFINITIONS
@@ -3249,6 +3390,9 @@
                 } else if (isCPC) {
                     // CPC: Blue brick border (simpler than GX4000's purple 3D bricks)
                     this.drawCPCBrickBorder(r, c, cpcColours);
+                } else if (is16Bit) {
+                    // 16-Bit: Use PNG tile border
+                    this.draw16BitBrickBorder(r, c, mdColours);
                 } else {
                     // Other modes: solid colour border
                     let borderColour;
@@ -3304,6 +3448,9 @@
                     } else if (isGenericPlus) {
                         // Draw colorful multi-color player for Generic Plus mode
                         this.drawPlusPlayer(r, p, plusColours, c);
+                    } else if (is16Bit) {
+                        // 16-Bit: Use PNG sprite animations
+                        this.draw16BitPlayer(r, p, mdColours, c);
                     } else {
                         // Other modes: rectangle fallback
                         r.drawRect(px, py, p.width, p.height, playerColour, 'foreground');
@@ -3345,6 +3492,9 @@
                     } else if (isGenericPlus) {
                         // Generic Plus: wavy harpoon with cyan/white coloring
                         this.drawPlusWavyHarpoon(r, h, plusColours, c);
+                    } else if (is16Bit) {
+                        // 16-Bit: Use PNG sprite harpoon
+                        this.draw16BitHarpoon(r, h, mdColours, c);
                     } else {
                         // Other modes: standard harpoon
                         const bodyW = Math.max(2, c.harpoonBodyW / 2);
@@ -3408,8 +3558,11 @@
                     } else if (isGenericPlus) {
                         // Generic Plus: Smooth gradient ball
                         this.drawPlusBall(r, b, plusColours);
+                    } else if (is16Bit) {
+                        // 16-Bit: Use PNG sprite balls
+                        this.draw16BitBall(r, b, ballColours);
                     } else {
-                        // 16-Bit: Per RULES_16BIT_MODE.md Rule 3: No true alpha blending
+                        // Fallback: Per RULES_16BIT_MODE.md Rule 3: No true alpha blending
                         // Use solid highlight colour instead of alpha (hardware shadow/highlight mode)
                         r.drawCircle(b.x, b.y, b.radius, ballColours[b.size], 'foreground');
                         // Solid highlight (simulating MD shadow/highlight mode)
@@ -4211,7 +4364,7 @@
             },
             
             // =================================================================
-            // 16-BIT BACKGROUND (rich colors, smooth gradients)
+            // 16-BIT BACKGROUND (PNG sprite or rich colors)
             // =================================================================
             draw16BitBackground(r, c, colours) {
                 const ctx = r.ctx;
@@ -4220,13 +4373,195 @@
                 const width = c.playfieldWidth;
                 const height = c.playfieldHeight;
                 
-                // Sky gradient
-                ctx.fillStyle = colours.skyBlue;
-                ctx.fillRect(left, top, width, height * 0.5);
+                // Use PNG background if loaded
+                if (SPRITES_16BIT.loaded && SPRITES_16BIT.background) {
+                    // Scale background image to fit playfield
+                    ctx.drawImage(
+                        SPRITES_16BIT.background,
+                        0, 0, SPRITES_16BIT.background.width, SPRITES_16BIT.background.height,
+                        left, top, width, height
+                    );
+                } else {
+                    // Fallback: Sky gradient
+                    ctx.fillStyle = colours.skyBlue;
+                    ctx.fillRect(left, top, width, height * 0.5);
+                    
+                    // Ground
+                    ctx.fillStyle = colours.groundBrown;
+                    ctx.fillRect(left, top + height * 0.5, width, height * 0.5);
+                }
+            },
+            
+            // =================================================================
+            // 16-BIT PLAYER RENDERING (PNG sprites with animations)
+            // =================================================================
+            draw16BitPlayer(r, p, colours, c) {
+                const ctx = r.ctx;
                 
-                // Ground
-                ctx.fillStyle = colours.groundBrown;
-                ctx.fillRect(left, top + height * 0.5, width, height * 0.5);
+                if (!SPRITES_16BIT.loaded) {
+                    // Fallback to simple rectangle
+                    ctx.fillStyle = colours.playerCyan;
+                    ctx.fillRect(p.x - p.width / 2, p.y - p.height, p.width, p.height);
+                    return;
+                }
+                
+                let spriteArray, frameIdx;
+                
+                // Determine which animation to use
+                if (this.harpoons && this.harpoons.length > 0) {
+                    // Shooting - use look_up/shoot sprites
+                    spriteArray = SPRITES_16BIT.player.shoot;
+                    frameIdx = Math.floor(p.walkTimer * 6) % spriteArray.length;
+                } else if (p.isWalking) {
+                    // Walking - use walk sprites
+                    spriteArray = SPRITES_16BIT.player.walk;
+                    frameIdx = Math.floor(p.walkTimer * 8) % spriteArray.length;
+                } else {
+                    // Idle - use rear sprites (facing away/back to screen)
+                    spriteArray = SPRITES_16BIT.player.rear;
+                    frameIdx = Math.floor(p.walkTimer * 3) % spriteArray.length;
+                }
+                
+                const sprite = spriteArray[frameIdx];
+                if (!sprite) return;
+                
+                // Calculate position - sprite bottom should align with player.y
+                const drawX = Math.floor(p.x - sprite.width / 2);
+                const drawY = Math.floor(p.y - sprite.height + p.bobOffset);
+                
+                ctx.save();
+                
+                // Flip horizontally if facing left
+                if (p.facing === -1 && p.isWalking) {
+                    ctx.translate(drawX + sprite.width, drawY);
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(sprite, 0, 0);
+                } else {
+                    ctx.drawImage(sprite, drawX, drawY);
+                }
+                
+                ctx.restore();
+            },
+            
+            // =================================================================
+            // 16-BIT BALL RENDERING (PNG sprites)
+            // =================================================================
+            draw16BitBall(r, ball, colours) {
+                const ctx = r.ctx;
+                
+                if (!SPRITES_16BIT.loaded || !SPRITES_16BIT.balls[ball.size]) {
+                    // Fallback to circle
+                    ctx.fillStyle = colours[ball.size] || colours.ballRed;
+                    ctx.beginPath();
+                    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    return;
+                }
+                
+                const sprite = SPRITES_16BIT.balls[ball.size];
+                
+                // Scale sprite to match ball radius
+                const targetSize = ball.radius * 2;
+                const drawX = Math.floor(ball.x - targetSize / 2);
+                const drawY = Math.floor(ball.y - targetSize / 2);
+                
+                ctx.drawImage(
+                    sprite,
+                    0, 0, sprite.width, sprite.height,
+                    drawX, drawY, targetSize, targetSize
+                );
+            },
+            
+            // =================================================================
+            // 16-BIT HARPOON RENDERING (PNG sprites)
+            // =================================================================
+            draw16BitHarpoon(r, h, colours, c) {
+                const ctx = r.ctx;
+                
+                if (!SPRITES_16BIT.loaded || !SPRITES_16BIT.harpoon.head) {
+                    // Fallback to simple rectangle harpoon
+                    const bodyW = Math.max(2, c.harpoonBodyW / 2);
+                    const headW = Math.max(6, c.harpoonBodyW * 1.5);
+                    const headH = Math.max(8, c.harpoonHeadH * 0.8);
+                    
+                    ctx.fillStyle = colours.harpoonOrange;
+                    ctx.fillRect(h.x - bodyW, h.yTop + headH, bodyW * 2, h.yBottom - h.yTop - headH);
+                    ctx.fillStyle = colours.harpoonYellow;
+                    ctx.fillRect(h.x - headW / 2, h.yTop, headW, headH);
+                    return;
+                }
+                
+                const head = SPRITES_16BIT.harpoon.head;
+                const body = SPRITES_16BIT.harpoon.body;
+                
+                // Draw harpoon body (repeated tile from bottom to top)
+                const bodyHeight = h.yBottom - h.yTop - head.height;
+                if (bodyHeight > 0) {
+                    // Repeat body tile
+                    for (let y = h.yTop + head.height; y < h.yBottom; y += body.height) {
+                        const drawH = Math.min(body.height, h.yBottom - y);
+                        ctx.drawImage(
+                            body,
+                            0, 0, body.width, drawH,
+                            h.x - body.width / 2, y, body.width, drawH
+                        );
+                    }
+                }
+                
+                // Draw harpoon head at top
+                ctx.drawImage(
+                    head,
+                    h.x - head.width / 2, h.yTop
+                );
+            },
+            
+            // =================================================================
+            // 16-BIT BRICK BORDER (PNG tile or fallback)
+            // =================================================================
+            draw16BitBrickBorder(r, c, colours) {
+                const ctx = r.ctx;
+                const borderSize = c.borderSize;
+                
+                if (SPRITES_16BIT.loaded && SPRITES_16BIT.border) {
+                    const tile = SPRITES_16BIT.border;
+                    const tileW = tile.width;
+                    const tileH = tile.height;
+                    
+                    // Top border
+                    for (let y = 0; y < borderSize; y += tileH) {
+                        for (let x = 0; x < c.width; x += tileW) {
+                            ctx.drawImage(tile, x, y);
+                        }
+                    }
+                    
+                    // Bottom border
+                    for (let y = c.floorY; y < c.floorY + borderSize; y += tileH) {
+                        for (let x = 0; x < c.width; x += tileW) {
+                            ctx.drawImage(tile, x, y);
+                        }
+                    }
+                    
+                    // Left border
+                    for (let y = borderSize; y < c.floorY; y += tileH) {
+                        for (let x = 0; x < borderSize; x += tileW) {
+                            ctx.drawImage(tile, x, y);
+                        }
+                    }
+                    
+                    // Right border
+                    for (let y = borderSize; y < c.floorY; y += tileH) {
+                        for (let x = c.width - borderSize; x < c.width; x += tileW) {
+                            ctx.drawImage(tile, x, y);
+                        }
+                    }
+                } else {
+                    // Fallback: solid color border
+                    ctx.fillStyle = colours.darkBlue;
+                    ctx.fillRect(0, 0, c.width, borderSize);
+                    ctx.fillRect(0, 0, borderSize, c.floorY + borderSize);
+                    ctx.fillRect(c.width - borderSize, 0, borderSize, c.floorY + borderSize);
+                    ctx.fillRect(borderSize, c.floorY, c.width - borderSize * 2, borderSize);
+                }
             },
             
             // =================================================================
